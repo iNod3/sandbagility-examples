@@ -7,12 +7,14 @@ from Sandbagility.Plugins import ProcessTracker
 
 import os
 from Sandbagility.Plugins import Automation
+from Sandbagility.Plugins import PsWaitForSingleProcessAsync
 from Sandbagility.Plugins import HyperWin32Api as HyperApi
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Trace a process activity, including its childs .')
     parser.add_argument('--process', type=str, default='explorer.exe', help='Process name to trace')
+    parser.add_argument('--entrypoint', action='store_true', help='Break at the entrpoint of the target process')
     parser.add_argument('--vm', default="Windows 10 x64 - 14393", help='Virtual Machine name')
     parser.add_argument('--output', default='D:\\Jail\\DroppedFiles\\', help='Output directory for dumped files')
     parser.add_argument('--monitor', default=[], nargs='+', help='...')
@@ -35,10 +37,6 @@ if __name__ == '__main__':
         helper.dbg.Restore()
         helper.dbg.Resume()
         helper.logger.info('Success')
-        
-    if args.run:
-        helper.dbg.Resume()
-        exit(0)
 
     if args.upload:
         RemoteFilename = Automation.Upload(helper, args.upload)
@@ -47,5 +45,13 @@ if __name__ == '__main__':
         else: 
             helper.logger.info('Upload %s failed' % args.upload.name)
 
-    ProcessTracker(helper, Process=args.process, Output=args.output, Monitors=args.monitor)
+    if args.run:
+        helper.UnsetAllBreakpoints()
+        helper.dbg.Resume()
+        exit(0)
+    elif args.entrypoint: 
+        PsWaitForSingleProcessAsync(helper, args.process)
+    else:
+        ProcessTracker(helper, Process=args.process, Output=args.output, Monitors=args.monitor)
+
     helper.Run()
