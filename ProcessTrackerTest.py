@@ -27,14 +27,11 @@ if __name__ == '__main__':
     parser.add_argument('--save', action='store_true', help='Save the running state')
     parser.add_argument('--restore', action='store_true', help='Restore previous state')
     parser.add_argument('--run', action='store_true', help='Run the virtual machine')
+    parser.add_argument('--swap', type=str, help='Change the current process for the given one')
+    parser.add_argument('--breakon', type=str, nargs='+', help='Change the current process for the given one')
 
-    if len(sys.argv) == 1:
-        args = parser.parse_args('--entrypoint --process notepad.exe --monitor Syscall'.split())
-    else:
-        args = parser.parse_args()
-
+    args = parser.parse_args()
     helper = Helper(args.vm, FDP)
-
     Process = args.process
 
     if args.save: 
@@ -49,18 +46,29 @@ if __name__ == '__main__':
         helper.dbg.Restore()
         helper.dbg.Resume()
         helper.logger.info('Success')
+
+    if args.swap:
+        ActiveProcess = helper.SwapContext(args.swap)
+        print(ActiveProcess)
         exit(0)
 
     if args.upload:
-        RemoteFilename = Automation.Upload(helper, args.upload)
-        if RemoteFilename: 
+        Status = Automation.Upload(helper, args.upload)
+
+        if Status: 
             helper.logger.info('Upload %s successeeded' % args.upload)
+            Process = os.path.basename(args.upload)
+            print(Process)
         else: 
             helper.logger.info('Upload %s failed' % args.upload)
-        exit(0)
+            exit(0)
+
+        helper.UnsetAllBreakpoints()
+        helper.dbg.Resume()
 
     if args.download:
         Automation.__download__(helper, args.download, output=args.output)
+        helper.dbg.Resume()
         exit(0)
 
     if args.run:
@@ -69,12 +77,11 @@ if __name__ == '__main__':
         exit(0)
 
     if args.entrypoint: 
-        PsWaitForSingleProcessAsync(helper, args.process)
+        PsWaitForSingleProcessAsync(helper, Process)
         helper.Run()
         
         Process = helper.PsGetCurrentProcess()
         print(Process)
 
-    ProcessTracker(helper, Process=Process, Output=args.output, Monitors=args.monitor)
-
+    ProcessTracker(helper, Process=Process, Output=args.output, Monitors=args.monitor, BreakOnActions=args.breakon)
     helper.Run()
