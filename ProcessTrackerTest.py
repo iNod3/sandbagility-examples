@@ -13,13 +13,17 @@ from Sandbagility.Plugins import PsWaitForSingleProcessAsync
 from Sandbagility.Plugins import HyperWin32Api as HyperApi
 from Sandbagility.Monitors import AvailableMonitors
 
+def timestamp():
+    import time
+    return time.strftime('%Y%m%d%H%M%S', time.localtime())
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Trace a process activity, including its childs .')
     parser.add_argument('--process', type=str, default='explorer.exe', help='Process name to trace')
     parser.add_argument('--entrypoint', action='store_true', help='Break at the entrpoint of the target process')
     parser.add_argument('--vm', default="Windows 10 x64 - 14393", help='Virtual Machine name')
-    parser.add_argument('--output', default='D:\\Jail\\DroppedFiles\\', help='Output directory for dumped files')
+    parser.add_argument('--output', default='D:\\Jail\\DroppedFiles\\' + timestamp(), help='Output directory for dumped files')
     parser.add_argument('--monitor', default=[], nargs='+', help='...')
     parser.add_argument('--upload', type=str, help='File to upload')
     parser.add_argument('--download', type=str, nargs='+', help='File to download')
@@ -28,9 +32,12 @@ if __name__ == '__main__':
     parser.add_argument('--restore', action='store_true', help='Restore previous state')
     parser.add_argument('--run', action='store_true', help='Run the virtual machine')
     parser.add_argument('--swap', type=str, help='Change the current process for the given one')
-    parser.add_argument('--breakon', type=str, nargs='+', help='Change the current process for the given one')
+    parser.add_argument('--breakon', default=[], type=str, nargs='+', help='Change the current process for the given one')
 
-    args = parser.parse_args()
+    if len(sys.argv) == 1:
+        args = parser.parse_args('--restore --entrypoint --upload D:\\Jail\\emotet\\325603186673.exe'.split())
+    else: args = parser.parse_args()
+
     helper = Helper(args.vm, FDP)
     Process = args.process
 
@@ -58,7 +65,6 @@ if __name__ == '__main__':
         if Status: 
             helper.logger.info('Upload %s successeeded' % args.upload)
             Process = os.path.basename(args.upload)
-            print(Process)
         else: 
             helper.logger.info('Upload %s failed' % args.upload)
             exit(0)
@@ -77,11 +83,16 @@ if __name__ == '__main__':
         exit(0)
 
     if args.entrypoint: 
+        
+        helper.logger.info('Waiting to reach entrypoint for : %s' % Process)
         PsWaitForSingleProcessAsync(helper, Process)
         helper.Run()
         
         Process = helper.PsGetCurrentProcess()
-        print(Process)
 
+    helper.logger.info('Target process   : %s' % Process)
+    helper.logger.info('Enabled monitors : %s' % ', '.join(args.monitor))
+    helper.logger.info('Break on actions : %s' % ', '.join(args.breakon))
+    helper.logger.info('Dropped files at : %s' % args.output)
     ProcessTracker(helper, Process=Process, Output=args.output, Monitors=args.monitor, BreakOnActions=args.breakon)
     helper.Run()
