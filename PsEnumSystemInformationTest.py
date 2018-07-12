@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     helper = Helper(args.vm, FDP)
 
-    for Process in helper.PsEnumProcesses(loadLdr=True):
+    for Process in helper.PsEnumProcesses(Detail=True):
         print(Process)
 
     for Module in helper.PsEnumLoadedModule():

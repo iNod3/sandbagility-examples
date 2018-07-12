@@ -10,7 +10,7 @@ if __name__ == '__main__':
     helper = Helper(VM_NAME, FDP, debug=['HyperApi'])
 
     helper.SwapContext('winlogon.exe', Userland=True)
-    ActiveProcess = helper.PsGetCurrentProcess(loadLdr=True)
+    ActiveProcess = helper.PsGetCurrentProcess(Detail=True)
     print(ActiveProcess)
 
     api = HyperApi(helper)
